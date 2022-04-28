@@ -23,7 +23,7 @@ project "spdlog"
 
 	defines 
 	{
-		"SPDLOG_COMPILED_LIB",
+		"SPDLOG_COMPILED_LIB"
 	}
 	
 	filter "system:windows"
@@ -31,10 +31,14 @@ project "spdlog"
 
 	filter "configurations:Debug"
 		runtime "Debug"
-		symbols "On"	-- debug version --
+		symbols "On"
 
 	filter "configurations:Release"
 		runtime "Release"
-		optimize "Full"	-- release version --
-		inlining "Auto"
-		floatingpoint "Fast"
+		optimize "On"
+		symbols "On"
+
+	filter "configurations:Distribution"
+		runtime "Release"
+		optimize "On"
+		symbols "Off"
