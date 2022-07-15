@@ -23,7 +23,7 @@ project "spdlog"
 
 	defines 
 	{
-		"SPDLOG_COMPILED_LIB",
+		"SPDLOG_COMPILED_LIB"
 	}
 	
 	filter "system:windows"
