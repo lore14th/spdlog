@@ -16,7 +16,7 @@ project "spdlog"
 		"include/spdlog/**.cpp",
 	}
 
-	sysincludedirs
+	externalincludedirs
 	{
 		"include"
 	}
