@@ -33,7 +33,7 @@
         {                                                                                                                                  \
             if (location.filename)                                                                                                         \
             {                                                                                                                              \
-                err_handler_(fmt_lib::format("{} [{}({})]", ex.what(), location.filename, location.line));                                 \
+                err_handler_(fmt_lib::format(SPDLOG_FMT_STRING("{} [{}({})]"), ex.what(), location.filename, location.line));              \
             }                                                                                                                              \
             else                                                                                                                           \
             {                                                                                                                              \
@@ -87,7 +87,7 @@ public:
     template<typename... Args>
     void log(source_loc loc, level::level_enum lvl, format_string_t<Args...> fmt, Args &&... args)
     {
-        log_(loc, lvl, fmt, std::forward<Args>(args)...);
+        log_(loc, lvl, details::to_string_view(fmt), std::forward<Args>(args)...);
     }
 
     template<typename... Args>
@@ -180,7 +180,7 @@ public:
     template<typename... Args>
     void log(source_loc loc, level::level_enum lvl, wformat_string_t<Args...> fmt, Args &&... args)
     {
-        log_(loc, lvl, fmt, std::forward<Args>(args)...);
+        log_(loc, lvl, details::to_string_view(fmt), std::forward<Args>(args)...);
     }
 
     template<typename... Args>
@@ -319,6 +319,10 @@ public:
     // each sink will get a separate instance of the formatter object.
     void set_formatter(std::unique_ptr<formatter> f);
 
+    // set formatting for the sinks in this logger.
+    // equivalent to
+    //     set_formatter(make_unique<pattern_formatter>(pattern, time_type))
+    // Note: each sink will get a new instance of a formatter object, replacing the old one.
     void set_pattern(std::string pattern, pattern_time_type time_type = pattern_time_type::local);
 
     // backtrace support.
@@ -364,7 +368,11 @@ protected:
         SPDLOG_TRY
         {
             memory_buf_t buf;
+#ifdef SPDLOG_USE_STD_FORMAT
             fmt_lib::vformat_to(std::back_inserter(buf), fmt, fmt_lib::make_format_args(std::forward<Args>(args)...));
+#else
+            fmt::vformat_to(fmt::appender(buf), fmt, fmt::make_format_args(std::forward<Args>(args)...));
+#endif
 
             details::log_msg log_msg(loc, name_, lvl, string_view_t(buf.data(), buf.size()));
             log_it_(log_msg, log_enabled, traceback_enabled);
@@ -386,7 +394,8 @@ protected:
         {
             // format to wmemory_buffer and convert to utf8
             wmemory_buf_t wbuf;
-            fmt_lib::vformat_to(std::back_inserter(wbuf), fmt, fmt_lib::make_format_args<fmt_lib::wformat_context>(std::forward<Args>(args)...));
+            fmt_lib::vformat_to(
+                std::back_inserter(wbuf), fmt, fmt_lib::make_format_args<fmt_lib::wformat_context>(std::forward<Args>(args)...));
 
             memory_buf_t buf;
             details::os::wstr_to_utf8buf(wstring_view_t(wbuf.data(), wbuf.size()), buf);
@@ -395,27 +404,6 @@ protected:
         }
         SPDLOG_LOGGER_CATCH(loc)
     }
-
-    // T can be statically converted to wstring_view, and no formatting needed.
-    template<class T, typename std::enable_if<std::is_convertible<const T &, spdlog::wstring_view_t>::value, int>::type = 0>
-    void log_(source_loc loc, level::level_enum lvl, const T &msg)
-    {
-        bool log_enabled = should_log(lvl);
-        bool traceback_enabled = tracer_.enabled();
-        if (!log_enabled && !traceback_enabled)
-        {
-            return;
-        }
-        SPDLOG_TRY
-        {
-            memory_buf_t buf;
-            details::os::wstr_to_utf8buf(msg, buf);
-            details::log_msg log_msg(loc, name_, lvl, string_view_t(buf.data(), buf.size()));
-            log_it_(log_msg, log_enabled, traceback_enabled);
-        }
-        SPDLOG_LOGGER_CATCH(loc)
-    }
-
 #endif // SPDLOG_WCHAR_TO_UTF8_SUPPORT
 
     // log the given message (if the given log level is high enough),
