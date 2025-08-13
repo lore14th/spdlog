@@ -14,8 +14,7 @@ public class Spdlog : TinfoilProjectBase
 		SourceFiles.Add("Spdlog.Build.cs");
 	}
 
-	[Sharpmake.Configure]
-	public void ConfigureAll(Project.Configuration config, TinfoilTarget target)
+	public override void ConfigureProject(Project.Configuration config, TinfoilTarget target)
 	{
 		config.Output = Configuration.OutputType.Lib;
 
