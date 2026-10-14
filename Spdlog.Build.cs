@@ -1,38 +1,43 @@
-// Spdlog Tinfoil build script
+// Tinfoil Engine build script
 
 using Sharpmake;
-using System;
 using System.IO;
-using System.Collections.Generic;
+using TinfoilBuildTool;
 
-[Sharpmake.Generate]
-public class Spdlog : TinfoilProjectBase
+using Configuration = Sharpmake.Project.Configuration;
+
+[BuildModule(typeof(TinfoilProject))]
+public class spdlog : TinfoilThirdPartyModuleDependency
 {
-	public Spdlog()
+	private bool m_UseFmtUnicode = false;
+
+	public spdlog(ReadOnlyModuleRules rules) : base(rules)
 	{
-		Name = "Spdlog";
-		SourceFiles.Add("Spdlog.Build.cs");
 	}
 
-	public override void ConfigureProject(Project.Configuration config, TinfoilTarget target)
+	public override void ConfigureBuild(Configuration config, ITarget target)
 	{
-		config.Output = Configuration.OutputType.Lib;
+		base.ConfigureBuild(config, target);
 
-		config.Options.Add(Options.Vc.Compiler.CppLanguageStandard.CPP17);
-		config.Options.Add(Options.Vc.Compiler.Exceptions.EnableWithSEH);
-		config.Options.Add(Options.Vc.General.WindowsTargetPlatformVersion.Latest);
-		config.Options.Add(Options.Vc.Librarian.TreatLibWarningAsErrors.Enable);
-
-		config.IncludePaths.Add("/include");
-		config.AdditionalCompilerOptions.Add("/utf-8");
+		config.IncludePaths.Add(Path.Combine("[project.SharpmakeCsPath]", "include"));
 
 		if (config.Output == Configuration.OutputType.Lib)
 		{
 			config.Defines.Add("SPDLOG_COMPILED_LIB");
 		}
 
-		ExcludeFolder(config, target, "tests");
-		ExcludeFolder(config, target, "bench");
-		ExcludeFolder(config, target, "example");
+		if (m_UseFmtUnicode)
+		{
+			config.AdditionalCompilerOptions.Add("/utf-8");
+		}
+		else
+		{
+			config.Defines.Add("FMT_UNICODE=0");
+			config.ExportDefines.Add("FMT_UNICODE=0");
+		}
+
+		config.SourceFilesBuildExclude.AddRange(Directory.EnumerateFiles(Path.Combine(RootDirectory, "tests")));
+		config.SourceFilesBuildExclude.AddRange(Directory.EnumerateFiles(Path.Combine(RootDirectory, "bench")));
+		config.SourceFilesBuildExclude.AddRange(Directory.EnumerateFiles(Path.Combine(RootDirectory, "example")));
 	}
 }
